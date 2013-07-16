@@ -12,7 +12,7 @@ var im = require('imagemagick');
 //
 //==================================================================
 
-var doLog = true;
+var logEnabled = false;
 
 //==================================================================
 //
@@ -21,12 +21,26 @@ var doLog = true;
 //==================================================================
 
 /**
+ * Turns logging on.
+ */
+function enableLogging() {
+    logEnabled = true;
+}
+
+/**
+ * Turns logging off.
+ */
+function disableLogging() {
+    logEnabled = false;
+}
+
+/**
  * Wrapper for log writing.
  *
  * @param string msg Message to write.
  */
 function writeLog(msg) {
-    if (doLog) {
+    if (logEnabled) {
         console.log(msg);
     }
 }
@@ -104,20 +118,6 @@ function doResize(input, width, height, output, errback, callback) {
         }
     });
 
-}
-
-/**
- * Turns logging on.
- */
-function enableLogging() {
-    doLog = true;
-}
-
-/**
- * Turns logging off.
- */
-function disableLogging() {
-    doLog = false;
 }
 
 /**

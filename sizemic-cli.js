@@ -24,8 +24,8 @@ var desc = {
     scale:     'Amount to scale the image e.g., 0.5.',
     width:     'Resize width to this (in pixels).',
     height:    'Resize height to this (in pixels).',
-    constrain: 'Constrain proportions when resizing.',
-    output:    'File to save the resized image as. Use relative paths.'
+    output:    'File to save the resized image as. Use relative paths.',
+    verbose:   'Barf extra output to console.'
 };
 
 var argv = optimist
@@ -39,6 +39,8 @@ var argv = optimist
            .alias('height', 'h')
            .default('output', '.')
            .alias('output', 'o')
+           .default('verbose', false)
+           .alias('verbose', 'v')
            .describe(desc)
            .argv;
 
@@ -47,11 +49,16 @@ var scale     = argv.scale;
 var width     = argv.width;
 var height    = argv.height;
 var output    = argv.output;
+var verbose   = argv.verbose;
 
 //==================================================================
 //
 // Functions
 //
 //==================================================================
+
+if (verbose) {
+    size.enableLogging();
+}
 
 size.resize(input, scale, width, height, output);
