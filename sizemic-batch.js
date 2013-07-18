@@ -16,6 +16,7 @@ var fs       = require('fs');
 var path     = require('path');
 var rimraf   = require('rimraf');
 var mkdirp   = require('mkdirp');
+var sleep    = require('sleep');
 
 //==================================================================
 //
@@ -45,7 +46,7 @@ var main = function () {
     };
 
     var argv = optimist
-               .default('manifest', 'sizemic-manifest')
+               .default('manifest', 'sizemic-manifest.json')
                .alias('manifest', 'm')
                .boolean('generate')
                .alias('generate', 'g')
@@ -104,7 +105,7 @@ var main = function () {
      * @param string msg Message to write.
      */
     function writeLog(msg, force) {
-        force = (force === 'undefined') ? false : true;
+        force = (typeof force === 'undefined') ? false : true;
         if (logEnabled || force) {
             console.log(msg);
         }
@@ -118,33 +119,64 @@ var main = function () {
      */
     function hasImageExtension(file) {
         var ext = file.substring(file.lastIndexOf('.') + 1);
-        return imageExtensions.indexOf(ext) > -1;
+        return imageExtensions.indexOf(ext.toLowerCase()) > -1;
     }
 
+    /**
+     * Removes a directory.
+     *
+     * @param string dir Path to dir to remove.
+     * @return boolean True if successful, false if not.
+     */
     function removeDir(dir) {
         try {
-            // fs.rmdirSync(dir);
             rimraf.sync(dir);
         } catch (err) {
             writeLog("Unable to remove '" + dir + "'", FORCE_LOG);
-            throw err;
+            writeLog("  " + err.message, FORCE_LOG);
+            // throw err;
             return false;
         }
 
         return true;
     }
 
+    /**
+     * Makes a directory.
+     *
+     * @param string dir Path to dir to make.
+     * @return boolean True if successful, false if not.
+     */
     function makeDir(dir) {
         try {
-            // fs.mkdirSync(dir);
             mkdirp.sync(dir);
         } catch (err) {
-            writeLog("Unable to create '" + dir + "'", FORCE_LOG);
-            throw err;
+            writeLog("ERROR: Unable to create '" + dir + "'", FORCE_LOG);
+            writeLog("  " + err.message, FORCE_LOG);
+            // throw err;
             return false;
         }
 
         return true;
+    }
+
+    /**
+     * Tests if a file exists. Works for folders too!
+     *
+     * @param string file Path to file to test.
+     * @return boolean Whether or not the file exists.
+     */
+    function fileExists(file) {
+        var exists = false;
+        try {
+            exists = fs.existsSync(file);
+        } catch (err) {
+            writeLog("ERROR: Unable to check if '" + file + "' exists.", FORCE_LOG);
+            writeLog("  " + err.message, FORCE_LOG);
+            return false;
+        }
+
+        return exists;
     }
 
     /**
@@ -169,17 +201,7 @@ var main = function () {
         var json = {};
         json.description = "Manifest file for batch processing images with sizemic-batch.";
 
-        json.files = [];
-        var files = fs.readdirSync(source);
-        files.forEach(function(file, index, arr) {
-
-            var f = source + path.sep + file;
-            if (fs.statSync(f).isFile() && hasImageExtension(file)) {
-                writeLog("Adding file '" + f + "'.");
-                json.files.push(file);
-            }
-
-        });
+        json.sourceDir = source;
 
         if (scale != 1.0) {
             json.scale = scale;
@@ -218,10 +240,13 @@ var main = function () {
      */
     function writeManifest(manifest, output, name) {
 
-        var filename = output + path.sep + name + '.json';
+        // var filename = output + path.sep + name + '.json';
+        var filename = name + '.json';
         fs.writeFile(filename, manifest, FILE_ENCODING, function(err) {
             if (err) {
-                throw err;
+                writeLog("ERROR: Could not write manifest.", FORCE_LOG);
+                writeLog("  " + err.message, FORCE_LOG);
+                // throw err;
             } else {
                 writeLog("Manifest written to '" + filename + "'.");
             }
@@ -240,6 +265,7 @@ var main = function () {
             var data = fs.readFileSync(manifest, FILE_ENCODING);
         } catch (err) {
             writeLog("ERROR: Could not read manifest.", FORCE_LOG);
+            writeLog("  " + err.message, FORCE_LOG);
             return;
         }
 
@@ -253,28 +279,85 @@ var main = function () {
      */
     function batch(manifest, manifestFile) {
 
-        var dir = manifestFile.substring(0, manifestFile.lastIndexOf(path.sep));
-        process.chdir(dir.replace(path.sep, '/'));
+        // Move into the folder where the manifest file lives as
+        // all paths in the manifest are relative to the file.
+        var dir = manifestFile.substring(0, manifestFile.lastIndexOf(path.sep)).trim();
+
+        if (dir != '') {
+            process.chdir(dir.replace(path.sep, '/'));
+        }
 
         var error = function(err) {
             writeLog("ERROR: Could not resize file.", FORCE_LOG);
+            writeLog("  "  + err.message, FORCE_LOG);
         };
 
-        var success = function() {
-            writeLog("File resized.");
+        var success = function(file) {
+            // writeLog("'" + file + "'resized.");
+            currentIndex++;
+            if (currentIndex < processThese.length) {
+                process(processThese[currentIndex]);
+            }
         };
+
+        var process = function(file) {
+            size.resize(
+                manifest.sourceDir + path.sep + file,
+                manifest.scale,
+                manifest.width,
+                manifest.height,
+                manifest.outputDir + path.sep + file,
+                error,
+                success
+            );
+        }
 
         // If output dir exists, delete it
-        if (fs.existsSync(manifest.outputDir)) {
+        if (fileExists(manifest.outputDir)) {
             removeDir(manifest.outputDir);
+            // Windows (maybe Mac too?) complains if you remove a file
+            // a folder and then recreate it. Sleeping for a second
+            // sidesteps the issue.
+            sleep.sleep(1);
         }
 
         // Create fresh version of output dir
         makeDir(manifest.outputDir);
 
-        manifest.files.forEach(function(file, index, arr) {
-            size.resize(file, manifest.scale, manifest.width, manifest.height, manifest.outputDir + path.sep + file, error, success);
+        try {
+            var files = fs.readdirSync(manifest.sourceDir);
+        } catch (err) {
+            writeLog("ERROR: Unable to read dir '" + manifest.sourceDir + "'.", FORCE_LOG);
+            writeLog("  " + err.message, FORCE_LOG);
+            return;
+        }
+
+        var processThese = [];
+        var currentIndex = 0;
+        files.forEach(function(file, index, arr) {
+
+            var f = manifest.sourceDir + path.sep + file;
+            if (fs.statSync(f).isFile() && hasImageExtension(file)) {
+                writeLog("Adding file '" + f + "'.");
+                processThese.push(file);
+            }
+
         });
+
+        if (processThese.length > 0) {
+            process(processThese[currentIndex]);
+        }
+
+        // processThese.forEach(function(file, index, arr) {
+        //     size.resize(
+        //         manifest.sourceDir + path.sep + file,
+        //         manifest.scale,
+        //         manifest.width,
+        //         manifest.height,
+        //         manifest.outputDir + path.sep + file,
+        //         error,
+        //         success);
+        // });
 
     }
 
@@ -284,21 +367,37 @@ var main = function () {
     //
     //==================================================================
 
-    if (args.verbose) {
+    if (args.verbose === true) {
         size.enableLogging();
         enableLogging();
     }
 
     if (args.generate) {
-        var json = generateManifest(args.source, args.scale, Math.ceil(parseInt(args.width)), Math.ceil(parseInt(args.height)), args.output, args.verbose);
+
+        var json = generateManifest(
+                        args.source,
+                        args.scale,
+                        Math.ceil(parseInt(args.width)),
+                        Math.ceil(parseInt(args.height)),
+                        args.output,
+                        args.verbose);
+
         if (json) {
             writeManifest(json, args.source, args.name);
         }
+
     } else if (args.manifest.trim() != '') {
+
+        if (!fileExists(args.manifest)) {
+            writeLog("ERROR: '" + args.manifest + "' does not exist.", FORCE_LOG);
+            return;
+        }
+
         var data = readManifest(args.manifest);
         if (data) {
             batch(data, args.manifest);
         }
+
     } else {
         // Usage?
     }

@@ -114,7 +114,7 @@ function doResize(input, width, height, output, errback, callback) {
         writeLog("Resized '" + input + "' to '" + width + "x" + height + "' into '" + opts.dstPath + "'");
 
         if (callback) {
-            callback();
+            callback(input);
         }
     });
 
