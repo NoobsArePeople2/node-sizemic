@@ -2,6 +2,8 @@
   "name": "sizemic",
   "version": "0.1.0",
   "description": "A utility for quickly and easily scripting image resizing.",
+  "author": "Sean Monahan <hello@seanmonahan.org>",
+  "license": "MIT",
   "main": "sizemic.js",
   "dependencies": {
     "optimist": "~0.3.5",
@@ -9,8 +11,12 @@
     "rimraf": "~2.2.1",
     "mkdirp": "~0.3.5"
   },
-  "devDependencies": {},
-  "repository": "",
-  "author": "Sean Monahan <http://seanmonahan.org>",
-  "license": "MIT"
+  "bin": {
+    "sizemic": "./bin/sizemic-cli",
+    "sizemic-batch": "./bin/sizemic-batch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:NoobsArePeople2/node-sizemic.git"
+  }
 }

@@ -19,6 +19,8 @@ var size     = require('./sizemic')
 //
 //==================================================================
 
+var main = function() {
+
 var desc = {
     input:     'Image to process. Use relative paths.',
     scale:     'Amount to scale the image e.g., 0.5.',
@@ -62,3 +64,7 @@ if (verbose) {
 }
 
 size.resize(input, scale, width, height, output);
+
+}
+
+module.exports.main = main;

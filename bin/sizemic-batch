@@ -1,0 +1,3 @@
+#!/usr/bin/env node
+
+require('../sizemic-batch.js').main();
