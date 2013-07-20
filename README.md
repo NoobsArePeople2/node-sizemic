@@ -50,4 +50,4 @@ This will run `sizemic` on all the images in the `yourfiles` folder applying the
 
 ## License
 
-Framed is licensed under the MIT license.
+Sizemic is licensed under the MIT license.
