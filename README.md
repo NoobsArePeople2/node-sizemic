@@ -4,7 +4,7 @@ A utility for quickly and easily scripting image resizing. Sizemic can be requir
 
 ## Installation
 
-    $ npm install -g https://github.com/NoobsArePeople2/node-sizemic
+    $ npm install -g git://github.com/NoobsArePeople2/node-sizemic.git
 
 ## Command Line Usage
 
