@@ -4,6 +4,8 @@ A utility for quickly and easily scripting image resizing. Sizemic can be requir
 
 ## Installation
 
+Sizemic requires you have [ImageMagick](http://www.imagemagick.org/) installed on your system. Luckily installation is easy with [pre-built binaries](http://www.imagemagick.org/script/binary-releases.php). Once ImageMagick is installed run the following command:
+
     $ npm install -g git://github.com/NoobsArePeople2/node-sizemic.git
 
 ## Command Line Usage
